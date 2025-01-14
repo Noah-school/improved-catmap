@@ -1,0 +1,11 @@
+# Ignore files
+certificate.crt
+certificate.csr
+private.key
+output/*
+test.py
+
+# Ignore folders
+idk
+__pycache__
+.venv

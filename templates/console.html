@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Console{% endblock %}
+
+{% block content %}
+<h2 class="text-center mt-5">Console Output</h2>
+<form id="runMainForm" class="form-inline mt-4">
+    <label for="args" class="mr-2">Main.py</label>
+    <input type="text" id="args" name="args" class="form-control mr-2" placeholder="Enter arguments">
+    <button type="button" class="btn btn-primary" onclick="runMain()">Run</button>
+</form>
+<form id="runIpForm" class="form-inline mt-4">
+    <label for="ipArgs" class="mr-2">IP.py</label>
+    <input type="text" id="ipArgs" name="ipArgs" class="form-control mr-2" placeholder="Enter arguments">
+    <button type="button" class="btn btn-primary" onclick="runIp()">Run</button>
+</form>
+<pre id="outputConsole" class="card mt-4 p-3" style="width: 100%; max-height: 80vh; overflow-y: auto;"></pre>
+<script>
+    function fetchConsoleOutput() {
+        fetch('/console_output')
+            .then(response => response.text())
+            .then(output => {
+                const outputConsole = document.getElementById('outputConsole');
+                outputConsole.textContent = output;
+                outputConsole.scrollTop = outputConsole.scrollHeight;
+            })
+            .catch(error => console.error('Fetch console output error:', error));
+    }
+
+    function runMain() {
+        const args = document.getElementById('args').value.split(' ');
+        fetch('/run_main', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ args })
+        })
+        .then(response => response.text())
+        .then(output => {
+            document.getElementById('outputConsole').textContent = output;
+            document.getElementById('outputConsole').scrollTop = document.getElementById('outputConsole').scrollHeight;
+        })
+        .catch(error => console.error('Run main error:', error));
+    }
+
+    function runIp() {
+        const args = document.getElementById('ipArgs').value.split(' ');
+        fetch('/run_ip', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ args })
+        })
+        .then(response => response.text())
+        .then(output => {
+            document.getElementById('outputConsole').textContent = output;
+            document.getElementById('outputConsole').scrollTop = document.getElementById('outputConsole').scrollHeight;
+        })
+        .catch(error => console.error('Run IP error:', error));
+    }
+
+    setInterval(fetchConsoleOutput, 1000);
+    fetchConsoleOutput();
+</script>
+{% endblock %}

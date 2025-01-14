@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<section><img id="displayImage" src="/image" alt="Display Image" class="img-fluid"></section>
+<table id="onlineIpsTable" class="table table-striped table-bordered mt-4">
+    <thead class="thead-dark">
+        <tr>
+            <th>IP Address</th>
+            <th>MAC Address</th>
+            <th>Open Ports</th>
+            <th>Vendor</th>
+            <th>OS</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Dynamic content -->
+    </tbody>
+</table>
+<div id="hostDetails" class="card mt-4 w-100" style="display: none;">
+    <div class="card-body">
+        <h3 class="card-title">Host Details</h3>
+        <pre id="hostDetailsContent" class="card-text"></pre>
+    </div>
+</div>
+<script>
+    function refreshImage() {
+        const img = document.getElementById('displayImage');
+        img.src = '/image?' + new Date().getTime();
+    }
+    setInterval(refreshImage, 1000);
+
+    function fetchHosts() {
+        fetch('/hosts')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const tableBody = document.getElementById('onlineIpsTable').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = '';
+                for (const [ip, details] of Object.entries(data)) {
+                    const row = tableBody.insertRow();
+                    row.addEventListener('click', () => displayHostDetails(ip, details));
+                    const cellIp = row.insertCell(0);
+                    const cellMac = row.insertCell(1);
+                    const cellPorts = row.insertCell(2);
+                    const cellVendor = row.insertCell(3);
+                    const cellOs = row.insertCell(4);
+
+                    cellIp.textContent = ip;
+                    cellMac.textContent = details.scan[ip].addresses.mac || 'N/A';
+                    const openPorts = details.scan[ip].tcp ? Object.keys(details.scan[ip].tcp).filter(port => details.scan[ip].tcp[port].state === 'open') : [];
+                    cellPorts.textContent = openPorts.join(', ') || 'N/A';
+                    cellVendor.textContent = details.scan[ip].vendor ? details.scan[ip].vendor[details.scan[ip].addresses.mac] || 'N/A' : 'N/A';
+                    const osMatches = details.scan[ip].osmatch ? details.scan[ip].osmatch.map(os => `${os.name} (${os.accuracy}%)`).join(', ') : 'N/A';
+                    cellOs.textContent = osMatches || 'N/A';
+                }
+            })
+            .catch(error => console.error('Fetch error:', error));
+    }
+
+    function displayHostDetails(ip, details) {
+        const hostDetails = document.getElementById('hostDetails');
+        const hostDetailsContent = document.getElementById('hostDetailsContent');
+        if (hostDetails.style.display === 'block' && hostDetailsContent.textContent.includes(ip)) {
+            hostDetails.style.display = 'none';
+        } else {
+            const { nmap, ...filteredDetails } = details;
+            hostDetailsContent.textContent = JSON.stringify(filteredDetails, null, 2);
+            hostDetails.style.display = 'block';
+        }
+    }
+
+    function fetchConsoleOutput() {
+        fetch('/console_output')
+            .then(response => response.text())
+            .then(output => {
+                const outputConsole = document.getElementById('outputConsole');
+                outputConsole.textContent = output;
+                outputConsole.scrollTop = outputConsole.scrollHeight;
+            })
+            .catch(error => console.error('Fetch console output error:', error));
+    }
+
+    setInterval(fetchHosts, 1000);
+    fetchHosts();
+    setInterval(fetchConsoleOutput, 1000);
+    fetchConsoleOutput();
+</script>
+{% endblock %}
