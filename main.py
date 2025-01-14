@@ -54,15 +54,20 @@ async def pingscan(emulate, network, wait=1, count=4, callback=None):
     try:
         subnet = ipaddress.IPv4Network(network)
         upHosts = []
+
+        batch_size = 256
         hosts = [str(ip) for ip in subnet.hosts()]
 
-        tasks = [pingda(emulate, ip, wait, count, callback) for ip in hosts]
-        initialResults = await asyncio.gather(*tasks)
-        upHosts.extend(filter(None, initialResults))
+        for i in range(0, len(hosts), batch_size):
+            tasks = [pingda(emulate, ip, wait, count, callback) for ip in hosts[i:i + batch_size]]
+            initialResults = await asyncio.gather(*tasks)
+            upHosts.extend(filter(None, initialResults))
+
         return upHosts
     except Exception as e:
         logging.error(f"Error in pingscan: {e}")
         return []
+
 
 
 async def nmapScan(host, args, callback=None):
@@ -79,7 +84,7 @@ async def nmapScan(host, args, callback=None):
 
 async def async_nmap_DataScan(upHosts, callback=None):
     try:
-        args = "-T4 -A"
+        args = "-n -T4 -A -Pn"
         scan_results = {}
         with open("./output/scan_results.json", "w") as f:
             for host in upHosts:
@@ -168,7 +173,7 @@ def showConsoleOutput(filtered_HostPorts):
 def main(emulate, network, noscan):
     try:
         epd = initialize_display(emulate=emulate)
-        image = Image.new("1", (epd.width, epd.height), 0).tobytes()
+        image = Image.new("1", (epd.width, epd.height), 0)
         text = [
             {
                 "text": "{0:=^20}".format("| {0} |".format("cybercat")),
@@ -187,7 +192,6 @@ def main(emulate, network, noscan):
                     "font_size": 12,
                 }
             ],
-            full_refresh=True,
         )
 
         backlog = []
@@ -252,8 +256,7 @@ def main(emulate, network, noscan):
                                     "font_size": 10,
                                 }
                             )
-                if 'text_backlog' in locals():
-                    update_display(epd, image, text_backlog)
+                update_display(epd, image, text_backlog)
                 time.sleep(0.1)
             except Exception as e:
                 logging.error(f"Error in display_callback: {e}")
