@@ -168,7 +168,7 @@ def showConsoleOutput(filtered_HostPorts):
 def main(emulate, network, noscan):
     try:
         epd = initialize_display(emulate=emulate)
-        image = Image.new("1", (epd.width, epd.height), 0)
+        image = Image.new("1", (epd.width, epd.height), 0).tobytes()
         text = [
             {
                 "text": "{0:=^20}".format("| {0} |".format("cybercat")),
@@ -252,7 +252,8 @@ def main(emulate, network, noscan):
                                     "font_size": 10,
                                 }
                             )
-                update_display(epd, image, text_backlog)
+                if 'text_backlog' in locals():
+                    update_display(epd, image, text_backlog)
                 time.sleep(0.1)
             except Exception as e:
                 logging.error(f"Error in display_callback: {e}")
