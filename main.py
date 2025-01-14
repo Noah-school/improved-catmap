@@ -16,38 +16,39 @@ logging.basicConfig(
 )
 
 
-async def pingda(emulate, ip, wait, count, callback=None):
-    try:
-        if emulate:
-            process = await asyncio.create_subprocess_exec(
-                "ping",
-                "-n",
-                str(count),
-                "-w",
-                str(wait * 1000),
-                str(ip),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        else:
-            process = await asyncio.create_subprocess_exec(
-                "ping",
-                "-c",
-                str(count),
-                "-W",
-                str(wait),
-                str(ip),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        stdout, _ = await process.communicate()
-        if "Request timed out." not in stdout.decode() and "Destination Host Unreachable" not in stdout.decode():
-            if callback:
-                callback(ip, "Ping scan")
-            return ip
-    except Exception as e:
-        logging.error(f"Error in pingda: {e}")
-    return None
+async def pingda(emulate, ip, wait, count, semaphore, callback=None):
+    async with semaphore:
+        try:
+            if emulate:
+                process = await asyncio.create_subprocess_exec(
+                    "ping",
+                    "-n",
+                    str(count),
+                    "-w",
+                    str(wait * 1000),
+                    str(ip),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    "ping",
+                    "-c",
+                    str(count),
+                    "-W",
+                    str(wait),
+                    str(ip),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            stdout, _ = await process.communicate()
+            if "Request timed out." not in stdout.decode() and "Destination Host Unreachable" not in stdout.decode() and "100% packet loss" not in stdout.decode():
+                if callback:
+                    callback(ip, "Ping scan")
+                return ip
+        except Exception as e:
+            logging.error(f"Error in pingda: {e}")
+        return None
 
 
 async def pingscan(emulate, network, wait=1, count=4, callback=None):
@@ -59,7 +60,8 @@ async def pingscan(emulate, network, wait=1, count=4, callback=None):
         hosts = [str(ip) for ip in subnet.hosts()]
 
         for i in range(0, len(hosts), batch_size):
-            tasks = [pingda(emulate, ip, wait, count, callback) for ip in hosts[i:i + batch_size]]
+            semaphore = asyncio.Semaphore(100)
+            tasks = [pingda(emulate, ip, wait, count, semaphore, callback) for ip in hosts[i:i + batch_size]]
             initialResults = await asyncio.gather(*tasks)
             upHosts.extend(filter(None, initialResults))
 
