@@ -14,7 +14,7 @@ Catmap is a network scanning tool that uses Nmap and Searchsploit to identify an
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/catmap.git
+    git clone https://github.com/noah-school/catmap.git
     cd catmap/newSCANNER
     ```
 
